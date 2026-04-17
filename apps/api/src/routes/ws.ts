@@ -19,12 +19,18 @@ export async function registerWsRoutes(app: FastifyInstance) {
         maxRetriesPerRequest: null,
       });
       const closeSub = () => {
-        try {
-          void sub.unsubscribe(`auction:${auctionId}`);
-          sub.disconnect();
-        } catch {
-          /* ignore */
-        }
+        void sub
+          .unsubscribe(`auction:${auctionId}`)
+          .catch(() => {
+            /* connection may already be closed */
+          })
+          .finally(() => {
+            try {
+              sub.disconnect();
+            } catch {
+              /* ignore */
+            }
+          });
       };
       sub.on("error", () => {
         closeSub();
