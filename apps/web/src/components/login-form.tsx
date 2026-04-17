@@ -18,9 +18,12 @@ export function LoginForm({
   const [step, setStep] = useState<"mobile" | "otp">("mobile");
   const [error, setError] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function requestOtp() {
+    if (busy) return;
     setError(null);
+    setBusy(true);
     try {
       const r = await api<{ devOtp?: string }>("/v1/auth/otp/request", {
         method: "POST",
@@ -30,11 +33,15 @@ export function LoginForm({
       setStep("otp");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function verify() {
+    if (busy) return;
     setError(null);
+    setBusy(true);
     try {
       const r = await api<{ token: string }>("/v1/auth/otp/verify", {
         method: "POST",
@@ -44,44 +51,65 @@ export function LoginForm({
       onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Invalid OTP");
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
     <div className={className}>
       {step === "mobile" ? (
-        <>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void requestOtp();
+          }}
+        >
           <div className="space-y-2">
             <Label htmlFor="login-mobile">Mobile number</Label>
             <Input
               id="login-mobile"
+              name="mobile"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              placeholder="+9198..."
+              placeholder="Enter mobile  number"
+              autoComplete="tel"
+              disabled={busy}
             />
           </div>
-          <Button className="mt-4 w-full" onClick={() => void requestOtp()}>
-            Send OTP
+          <Button className="w-full" type="submit" disabled={busy}>
+            {busy ? "Sending…" : "Send OTP"}
           </Button>
-        </>
+        </form>
       ) : (
-        <>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void verify();
+          }}
+        >
           <div className="space-y-2">
             <Label htmlFor="login-otp">OTP</Label>
             <Input
               id="login-otp"
+              name="otp"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               placeholder="6 digits"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              disabled={busy}
             />
           </div>
-          {devOtp && <p className="text-muted-foreground mt-2 text-xs">Dev hint: use {devOtp}</p>}
-          <Button className="mt-4 w-full" onClick={() => void verify()}>
-            Verify & continue
+          {devOtp && <p className="text-muted-foreground text-xs">Dev hint: use {devOtp}</p>}
+          <Button className="w-full" type="submit" disabled={busy}>
+            {busy ? "Verifying…" : "Verify & continue"}
           </Button>
-        </>
+        </form>
       )}
-      {error && <p className="text-destructive mt-3 text-sm">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
     </div>
   );
 }

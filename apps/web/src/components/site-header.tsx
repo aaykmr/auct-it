@@ -2,8 +2,18 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +27,17 @@ import { Moon, Sun } from "lucide-react";
 
 export function SiteHeader() {
   const { setTheme } = useTheme();
+  const router = useRouter();
   const loggedIn = useIsLoggedIn();
   const { openLogin } = useLoginSheet();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  function confirmLogout() {
+    setStoredToken(null);
+    setLogoutOpen(false);
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur">
@@ -50,7 +69,7 @@ export function SiteHeader() {
             </>
           )}
           {loggedIn ? (
-            <Button size="sm" variant="secondary" type="button" onClick={() => setStoredToken(null)}>
+            <Button size="sm" variant="secondary" type="button" onClick={() => setLogoutOpen(true)}>
               Log out
             </Button>
           ) : (
@@ -74,6 +93,23 @@ export function SiteHeader() {
           </DropdownMenu>
         </nav>
       </div>
+
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="sm:max-w-sm" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Sign out?</DialogTitle>
+            <DialogDescription>You will need to sign in again to bid or manage listings.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={() => setLogoutOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="secondary" onClick={confirmLogout}>
+              Log out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

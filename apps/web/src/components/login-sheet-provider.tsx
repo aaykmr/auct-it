@@ -10,12 +10,12 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LoginForm } from "@/components/login-form";
 
 type OpenOpts = { onSuccess?: () => void };
@@ -51,15 +51,14 @@ export function LoginSheetProvider({ children }: { children: ReactNode }) {
   return (
     <LoginSheetCtx.Provider value={value}>
       {children}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Sign in</SheetTitle>
-            <SheetDescription>Phone number + OTP (dummy code in development).</SheetDescription>
-          </SheetHeader>
-          <LoginForm onSuccess={handleSuccess} className="mt-4 px-1" />
-        </SheetContent>
-      </Sheet>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sign in</DialogTitle>
+          </DialogHeader>
+          <LoginForm onSuccess={handleSuccess} className="px-6 pb-6" />
+        </DialogContent>
+      </Dialog>
     </LoginSheetCtx.Provider>
   );
 }
