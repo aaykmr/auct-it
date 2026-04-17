@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ListingLocationLine } from "@/components/listing-location";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Countdown } from "@/components/countdown";
@@ -49,9 +50,7 @@ export function AuctionGrid({ auctions }: { auctions: AuctionRow[] }) {
             </CardHeader>
             <CardContent className="space-y-1 p-3">
               <p className="line-clamp-2 text-sm font-medium leading-snug">{a.listing.title}</p>
-              <p className="text-muted-foreground text-xs">
-                {a.listing.cities.map((c) => c.city.name).join(", ")}
-              </p>
+              <ListingLocationLine cities={a.listing.cities} separator=", " variant="block" className="text-xs" />
             </CardContent>
             <CardFooter className="flex flex-col items-stretch gap-1 border-t bg-muted/30 p-3">
               <div className="flex justify-between text-xs">

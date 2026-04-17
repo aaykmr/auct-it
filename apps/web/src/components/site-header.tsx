@@ -26,7 +26,7 @@ import {
 import { useLoginSheet } from "@/components/login-sheet-provider";
 import { useIsLoggedIn } from "@/lib/use-auth";
 import { api, getStoredToken, PROFILE_UPDATE_EVENT, setStoredToken } from "@/lib/api";
-import { Moon, Sun, UserRound } from "lucide-react";
+import { MoonIcon, SunIcon, UserIcon } from "@phosphor-icons/react";
 
 export function SiteHeader() {
   const { setTheme } = useTheme();
@@ -85,7 +85,7 @@ export function SiteHeader() {
                 className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-2")}
                 aria-label="Account menu"
               >
-                <UserRound className="size-4 shrink-0" />
+                <UserIcon className="size-4 shrink-0" weight="regular" />
                 <span className="max-w-[8rem] truncate">{profileName ?? "Account"}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[12rem]">
@@ -127,8 +127,8 @@ export function SiteHeader() {
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}
               aria-label="Toggle theme"
             >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <SunIcon className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" weight="regular" />
+              <MoonIcon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" weight="regular" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>

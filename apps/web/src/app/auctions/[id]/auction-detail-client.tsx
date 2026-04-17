@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AuctionImageCarousel } from "@/components/auction-image-carousel";
+import { ListingLocationLine } from "@/components/listing-location";
 import { AuctionBidFields, AuctionBidHeader } from "@/app/auctions/[id]/auction-bid-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,16 @@ import { auctionWebSocketUrl } from "@/lib/ws";
 import { cn } from "@/lib/utils";
 
 type BidRow = { id: string; amount: string; createdAt: string; bidder: string };
+
+const BIDDER_TABLE_MAX_LEN = 9;
+
+/** First name only (first whitespace-delimited token), max 9 chars then ellipsis. */
+function formatBidderForTable(raw: string): string {
+  const first = raw.trim().split(/\s+/)[0] ?? "";
+  if (!first) return "—";
+  if (first.length <= BIDDER_TABLE_MAX_LEN) return first;
+  return `${first.slice(0, BIDDER_TABLE_MAX_LEN)}…`;
+}
 
 export function AuctionDetailClient({
   auctionId,
@@ -207,9 +218,11 @@ export function AuctionDetailClient({
           <div>
             <p className="text-muted-foreground text-sm md:text-base">{initial.listing.category.name}</p>
             <h1 className="text-2xl font-bold md:text-3xl lg:text-4xl">{initial.listing.title}</h1>
-            <p className="text-muted-foreground mt-2 text-sm md:text-base">
-              {initial.listing.cities.map((c) => c.city.name).join(" · ")}
-            </p>
+            <ListingLocationLine
+              cities={initial.listing.cities}
+              className="mt-2 text-sm md:text-base"
+              iconClassName="size-5 shrink-0 text-muted-foreground md:size-6"
+            />
           </div>
           <Card>
             <CardHeader>
@@ -227,7 +240,9 @@ export function AuctionDetailClient({
                 <TableBody>
                   {bids.map((b) => (
                     <TableRow key={b.id}>
-                      <TableCell className="font-medium">{b.bidder}</TableCell>
+                      <TableCell className="max-w-[10ch] font-medium" title={b.bidder}>
+                      {formatBidderForTable(b.bidder)}
+                    </TableCell>
                       <TableCell className="text-right">₹{b.amount}</TableCell>
                       <TableCell className="text-muted-foreground text-right text-xs md:text-sm">
                         {new Date(b.createdAt).toLocaleString()}

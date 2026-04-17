@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ListingLocationLine } from "@/components/listing-location";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmSheet } from "@/components/confirm-sheet";
 import { useLoginSheet } from "@/components/login-sheet-provider";
@@ -139,7 +140,13 @@ export default function BiddingPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg md:text-xl">{a.listing.title}</CardTitle>
                   <CardDescription className="text-base">
-                    {a.listing.category.name} · {a.listing.cities.map((c) => c.city.name).join(" · ")}
+                    <span>{a.listing.category.name}</span>
+                    {" · "}
+                    <ListingLocationLine
+                      cities={a.listing.cities}
+                      variant="inline"
+                      iconClassName="size-[1.125rem] shrink-0 text-muted-foreground sm:size-5"
+                    />
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">

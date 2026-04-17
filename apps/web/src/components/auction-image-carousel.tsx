@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CaretLeftIcon, CaretRightIcon, XIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -120,7 +120,7 @@ export function AuctionImageCarousel({
                   go(-1);
                 }}
               >
-                <ChevronLeft className="size-4" />
+                <CaretLeftIcon className="size-4" weight="regular" />
               </Button>
             </div>
             <div className="absolute top-1/2 right-2 z-10 -translate-y-1/2 md:right-3">
@@ -135,7 +135,7 @@ export function AuctionImageCarousel({
                   go(1);
                 }}
               >
-                <ChevronRight className="size-4" />
+                <CaretRightIcon className="size-4" weight="regular" />
               </Button>
             </div>
             <div className="absolute bottom-3 left-0 right-0 z-10 flex justify-center gap-1.5">
@@ -176,7 +176,7 @@ export function AuctionImageCarousel({
               aria-label="Close"
               onClick={() => setFullscreen(false)}
             >
-              <X className="size-6" />
+              <XIcon className="size-6" weight="regular" />
             </Button>
           </div>
           <div
@@ -211,7 +211,7 @@ export function AuctionImageCarousel({
                     aria-label="Previous image"
                     onClick={() => go(-1)}
                   >
-                    <ChevronLeft className="size-5" />
+                    <CaretLeftIcon className="size-5" weight="regular" />
                   </Button>
                 </div>
                 <div className="absolute top-1/2 right-2 z-10 -translate-y-1/2">
@@ -223,7 +223,7 @@ export function AuctionImageCarousel({
                     aria-label="Next image"
                     onClick={() => go(1)}
                   >
-                    <ChevronRight className="size-5" />
+                    <CaretRightIcon className="size-5" weight="regular" />
                   </Button>
                 </div>
                 <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
