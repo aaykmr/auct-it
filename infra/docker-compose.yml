@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: auctit
+      POSTGRES_PASSWORD: auctit
+      POSTGRES_DB: auctit
+    # Host 5433 avoids clashing with a local Postgres on 127.0.0.1:5432 (Homebrew / Postgres.app).
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: auctit
+      RABBITMQ_DEFAULT_PASS: auctit
+
+volumes:
+  pgdata:
