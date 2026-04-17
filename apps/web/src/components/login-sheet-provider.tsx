@@ -55,6 +55,7 @@ export function LoginSheetProvider({ children }: { children: ReactNode }) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Sign in</DialogTitle>
+            <DialogDescription>Phone number and one-time code.</DialogDescription>
           </DialogHeader>
           <LoginForm onSuccess={handleSuccess} className="px-6 pb-6" />
         </DialogContent>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { resolveAuctionIfEnded } from "../lib/auction-resolve.js";
+import { publicBidderLabel } from "../lib/public-bidder.js";
 import { requireVerifiedSeller } from "../lib/auth.js";
 
 export async function registerAuctionRoutes(app: FastifyInstance) {
@@ -110,28 +111,31 @@ export async function registerAuctionRoutes(app: FastifyInstance) {
             category: true,
             cities: { include: { city: true } },
             seller: { select: { id: true, name: true } },
-            images: { orderBy: { sortOrder: "asc" }, take: 1 },
+            images: { orderBy: { sortOrder: "asc" } },
           },
         },
         bids: {
           where: { status: "accepted" },
           orderBy: { amount: "desc" },
           take: 1,
-          include: { bidder: { select: { id: true, name: true, mobileNumber: true } } },
+          include: { bidder: { select: { name: true } } },
         },
       },
     });
     if (!auction) return reply.status(404).send({ error: "Not found" });
-    const { images, ...listingRest } = auction.listing;
+    const { bids, listing, ...auctionRest } = auction;
+    const { images, ...listingRest } = listing;
+    const imageUrls = images.map((img) => img.url);
     return reply.send({
       auction: {
-        ...auction,
+        ...auctionRest,
         listing: {
           ...listingRest,
-          basePrice: auction.listing.basePrice.toString(),
-          coverImageUrl: images[0]?.url ?? null,
+          basePrice: listing.basePrice.toString(),
+          coverImageUrl: imageUrls[0] ?? null,
+          imageUrls,
         },
-        currentBid: auction.bids[0]?.amount?.toString() ?? null,
+        currentBid: bids[0]?.amount?.toString() ?? null,
       },
     });
   });
@@ -144,14 +148,14 @@ export async function registerAuctionRoutes(app: FastifyInstance) {
       where: { auctionId: params.id, status: "accepted" },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { bidder: { select: { id: true, name: true, mobileNumber: true } } },
+      include: { bidder: { select: { name: true } } },
     });
     return reply.send({
       bids: bids.map((b) => ({
         id: b.id,
         amount: b.amount.toString(),
         createdAt: b.createdAt,
-        bidder: b.bidder.name ?? b.bidder.mobileNumber,
+        bidder: publicBidderLabel(b.bidder.name),
       })),
     });
   });

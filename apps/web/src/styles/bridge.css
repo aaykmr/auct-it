@@ -1,0 +1,60 @@
+/**
+ * Maps human-readable --ds-* tokens → shadcn / Tailwind semantic variables.
+ * Stable when swapping themes: only change the theme import in globals.css.
+ * Theme values are hex/rgba in `src/styles/themes/ios-16.css`.
+ *
+ * Tailwind utilities resolve: globals.css @theme → `--color-*` → these `--*` vars.
+ *
+ * Text utilities (common confusion):
+ * - `text-foreground` — main body/title text.
+ * - `text-muted-foreground` — secondary labels (maps to `--muted-foreground` / content-secondary).
+ * - `bg-primary` + `text-primary-foreground` — text on primary buttons.
+ * - `bg-secondary` + `text-secondary-foreground` — text on secondary (gray) buttons.
+ * - `text-secondary` — **not** “secondary text” — it paints text with the **secondary fill** color
+ *   (same as `bg-secondary`). Use `text-muted-foreground` or `text-foreground` for body copy instead.
+ */
+
+:root {
+  --primary: var(--ds-color-action-primary);
+  --primary-foreground: var(--ds-color-action-primary-on);
+  --secondary: var(--ds-color-action-secondary);
+  --secondary-foreground: var(--ds-color-action-secondary-on);
+
+  --background: var(--ds-color-surface-grouped);
+  --foreground: var(--ds-color-content-primary);
+
+  --card: var(--ds-color-surface-raised);
+  --card-foreground: var(--ds-color-content-primary);
+
+  --popover: var(--ds-color-surface-overlay);
+  --popover-foreground: var(--ds-color-content-primary);
+
+  --muted: var(--ds-color-muted-surface);
+  --muted-foreground: var(--ds-color-content-secondary);
+
+  --accent: var(--ds-color-accent-surface);
+  --accent-foreground: var(--ds-color-accent-on);
+
+  --destructive: var(--ds-color-danger);
+
+  --border: var(--ds-color-border-hairline);
+  --input: var(--ds-color-input-edge);
+  --ring: var(--ds-color-focus-ring);
+
+  --radius: var(--ds-radius-base);
+
+  --chart-1: var(--ds-chart-1);
+  --chart-2: var(--ds-chart-2);
+  --chart-3: var(--ds-chart-3);
+  --chart-4: var(--ds-chart-4);
+  --chart-5: var(--ds-chart-5);
+
+  --sidebar: var(--ds-color-sidebar-surface);
+  --sidebar-foreground: var(--ds-color-sidebar-content);
+  --sidebar-primary: var(--ds-color-sidebar-primary);
+  --sidebar-primary-foreground: var(--ds-color-sidebar-primary-on);
+  --sidebar-accent: var(--ds-color-sidebar-accent);
+  --sidebar-accent-foreground: var(--ds-color-sidebar-accent-on);
+  --sidebar-border: var(--ds-color-sidebar-border);
+  --sidebar-ring: var(--ds-color-sidebar-ring);
+}

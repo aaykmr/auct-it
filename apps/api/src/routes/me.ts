@@ -3,7 +3,22 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireUser } from "../lib/auth.js";
 
+const patchMeSchema = z.object({
+  name: z.string().trim().min(1, "Enter your name.").max(80, "Name is too long."),
+});
+
 export async function registerMeRoutes(app: FastifyInstance) {
+  app.patch("/v1/me", { preHandler: requireUser }, async (req, reply) => {
+    const sub = (req.user as { sub: string }).sub;
+    const body = patchMeSchema.parse(req.body);
+    const user = await prisma.user.update({
+      where: { id: sub },
+      data: { name: body.name },
+      select: { id: true, name: true, createdAt: true, updatedAt: true },
+    });
+    return reply.send({ user });
+  });
+
   app.get("/v1/me/auctions/bidding", { preHandler: requireUser }, async (req, reply) => {
     const userId = (req.user as { sub: string }).sub;
     const q = z

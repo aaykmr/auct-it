@@ -1,18 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
+import { AuctionImageCarousel } from "@/components/auction-image-carousel";
+import { AuctionBidFields, AuctionBidHeader } from "@/app/auctions/[id]/auction-bid-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Countdown } from "@/components/countdown";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BidConfirmOverlay } from "@/components/bid-confirm-overlay";
 import { useLoginSheet } from "@/components/login-sheet-provider";
 import { useToast } from "@/components/toast-provider";
 import { api, getStoredToken } from "@/lib/api";
 import { clearPendingBid, getPendingBid, setPendingBid } from "@/lib/pending-bid";
 import { auctionWebSocketUrl } from "@/lib/ws";
+import { cn } from "@/lib/utils";
 
 type BidRow = { id: string; amount: string; createdAt: string; bidder: string };
 
@@ -30,6 +31,7 @@ export function AuctionDetailClient({
       title: string;
       basePrice: string;
       coverImageUrl?: string | null;
+      imageUrls?: string[];
       category: { name: string };
       cities: { city: { name: string } }[];
     };
@@ -48,8 +50,10 @@ export function AuctionDetailClient({
     canCancel: boolean;
     myLatestBidAmount: string | null;
   } | null>(null);
+  const [bidSheetOpen, setBidSheetOpen] = useState(false);
 
   const minNext = Number(current ?? initial.listing.basePrice) + 0.01;
+  const currentDisplay = current ?? initial.listing.basePrice;
 
   useEffect(() => {
     const token = getStoredToken();
@@ -142,6 +146,17 @@ export function AuctionDetailClient({
     setPlaceConfirmOpen(true);
   }
 
+  function openMobileBidEntry() {
+    if (isSellerViewer) return;
+    if (!getStoredToken()) {
+      openLogin({
+        onSuccess: () => setBidSheetOpen(true),
+      });
+      return;
+    }
+    setBidSheetOpen(true);
+  }
+
   async function executePlaceBid() {
     const n = validateAmountForBid();
     if (n === null) throw new Error("Invalid amount");
@@ -173,133 +188,143 @@ export function AuctionDetailClient({
     void loadBidMine();
   }
 
+  const showMobileBidBar = isSellerViewer === false;
+
   return (
-    <div className="grid gap-8 lg:grid-cols-4">
-      <div className="space-y-4 lg:col-span-3">
-        <div className="relative aspect-[16/10] overflow-hidden rounded-xl border bg-muted">
-          <Image
-            src={
-              initial.listing.coverImageUrl ??
-              `https://picsum.photos/seed/${auctionId}/1600/1000`
-            }
-            alt=""
-            fill
-            className="object-cover"
-            priority
+    <>
+      <div
+        className={cn(
+          "grid gap-8 lg:grid-cols-4",
+          showMobileBidBar && "pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0",
+        )}
+      >
+        <div className="space-y-4 lg:col-span-3">
+          <AuctionImageCarousel
+            auctionId={auctionId}
+            title={initial.listing.title}
+            imageUrls={initial.listing.imageUrls ?? (initial.listing.coverImageUrl ? [initial.listing.coverImageUrl] : [])}
           />
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm md:text-base">{initial.listing.category.name}</p>
-          <h1 className="text-2xl font-bold md:text-3xl lg:text-4xl">{initial.listing.title}</h1>
-          <p className="text-muted-foreground mt-2 text-sm md:text-base">
-            {initial.listing.cities.map((c) => c.city.name).join(" · ")}
-          </p>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Recent bids</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Bidder</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bids.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell className="font-medium">{b.bidder}</TableCell>
-                    <TableCell className="text-right">₹{b.amount}</TableCell>
-                    <TableCell className="text-muted-foreground text-right text-xs md:text-sm">
-                      {new Date(b.createdAt).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {bids.length === 0 && (
-              <p className="text-muted-foreground py-6 text-center text-sm md:text-base">No bids yet.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="lg:col-span-1">
-        <Card className="relative sticky top-20">
-          <CardHeader>
-            <CardTitle className="text-base md:text-lg">Place a bid</CardTitle>
-            <p className="text-muted-foreground text-xs md:text-sm">
-              Ends in <Countdown endAt={initial.endAt} />
+          <div>
+            <p className="text-muted-foreground text-sm md:text-base">{initial.listing.category.name}</p>
+            <h1 className="text-2xl font-bold md:text-3xl lg:text-4xl">{initial.listing.title}</h1>
+            <p className="text-muted-foreground mt-2 text-sm md:text-base">
+              {initial.listing.cities.map((c) => c.city.name).join(" · ")}
             </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-muted-foreground text-xs md:text-sm">Current bid</p>
-              <p className="text-2xl font-bold text-primary md:text-3xl">₹{current ?? initial.listing.basePrice}</p>
-              <p className="text-muted-foreground text-xs md:text-sm">Min next: ₹{minNext.toFixed(2)}</p>
-            </div>
-            {isSellerViewer === null ? (
-              <p className="text-muted-foreground text-xs md:text-sm">Checking account…</p>
-            ) : isSellerViewer ? (
-              <p className="text-muted-foreground text-sm md:text-base">
-                You listed this item—bidding is disabled; other bids appear below.
-              </p>
-            ) : (
-              <>
-                <Input
-                  type="number"
-                  placeholder="Your bid"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="md:text-base"
-                />
-                <Button className="w-full md:text-base" onClick={() => void requestBid()}>
-                  Bid
-                </Button>
-                {bidMine?.canCancel && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full md:text-base"
-                    onClick={() => setCancelConfirmOpen(true)}
-                  >
-                    Cancel my bid
-                  </Button>
-                )}
-                {msg && <p className="text-destructive text-xs md:text-sm">{msg}</p>}
-              </>
-            )}
-          </CardContent>
-          <BidConfirmOverlay
-            open={placeConfirmOpen}
-            onOpenChange={(o) => {
-              setPlaceConfirmOpen(o);
-              if (!o) clearPendingBid();
-            }}
-            title="Confirm bid"
-            description={`Place bid of ₹${Number(amount).toFixed(2)}?`}
-            confirmLabel="Confirm bid"
-            cancelLabel="Decline"
-            onConfirm={executePlaceBid}
-          />
-          <BidConfirmOverlay
-            open={cancelConfirmOpen}
-            onOpenChange={setCancelConfirmOpen}
-            title="Cancel bid"
-            description={
-              bidMine?.myLatestBidAmount
-                ? `Withdraw your bid of ₹${bidMine.myLatestBidAmount}? The next highest bid will become current.`
-                : "Withdraw your bid?"
-            }
-            confirmLabel="Cancel bid"
-            cancelLabel="Keep bid"
-            variant="destructive"
-            onConfirm={executeCancelBid}
-          />
-        </Card>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl">Recent bids</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bidder</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bids.map((b) => (
+                    <TableRow key={b.id}>
+                      <TableCell className="font-medium">{b.bidder}</TableCell>
+                      <TableCell className="text-right">₹{b.amount}</TableCell>
+                      <TableCell className="text-muted-foreground text-right text-xs md:text-sm">
+                        {new Date(b.createdAt).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {bids.length === 0 && (
+                <p className="text-muted-foreground py-6 text-center text-sm md:text-base">No bids yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        <div className="hidden lg:col-span-1 lg:block">
+          <Card className="sticky top-20">
+            <AuctionBidHeader endAt={initial.endAt} />
+            <CardContent className="space-y-3">
+              <AuctionBidFields
+                isSellerViewer={isSellerViewer}
+                currentDisplay={currentDisplay}
+                minNext={minNext}
+                amount={amount}
+                onAmountChange={setAmount}
+                onRequestBid={requestBid}
+                bidMine={bidMine}
+                onCancelClick={() => setCancelConfirmOpen(true)}
+                msg={msg}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+
+      {showMobileBidBar && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 pt-3 backdrop-blur-md lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+          <Button type="button" className="w-full" aria-label="Open bidding" onClick={openMobileBidEntry}>
+            Bid
+          </Button>
+        </div>
+      )}
+
+      <Sheet open={bidSheetOpen} onOpenChange={setBidSheetOpen}>
+        <SheetContent
+          side="bottom"
+          showCloseButton
+          className="max-h-[min(90dvh,720px)] gap-0 rounded-t-xl p-0 sm:mx-auto sm:max-w-lg"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Place a bid</SheetTitle>
+            <SheetDescription>Current auction price and bid form.</SheetDescription>
+          </SheetHeader>
+          <div className="flex max-h-[min(90dvh,720px)] flex-col">
+            <AuctionBidHeader endAt={initial.endAt} className="shrink-0 border-b" />
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+              <AuctionBidFields
+                isSellerViewer={isSellerViewer}
+                currentDisplay={currentDisplay}
+                minNext={minNext}
+                amount={amount}
+                onAmountChange={setAmount}
+                onRequestBid={requestBid}
+                bidMine={bidMine}
+                onCancelClick={() => setCancelConfirmOpen(true)}
+                msg={msg}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <BidConfirmOverlay
+        open={placeConfirmOpen}
+        onOpenChange={(o) => {
+          setPlaceConfirmOpen(o);
+          if (!o) clearPendingBid();
+        }}
+        title="Confirm bid"
+        description={`Place bid of ₹${Number(amount).toFixed(2)}?`}
+        confirmLabel="Confirm bid"
+        cancelLabel="Decline"
+        onConfirm={executePlaceBid}
+      />
+      <BidConfirmOverlay
+        open={cancelConfirmOpen}
+        onOpenChange={setCancelConfirmOpen}
+        title="Cancel bid"
+        description={
+          bidMine?.myLatestBidAmount
+            ? `Withdraw your bid of ₹${bidMine.myLatestBidAmount}? The next highest bid will become current.`
+            : "Withdraw your bid?"
+        }
+        confirmLabel="Cancel bid"
+        cancelLabel="Keep bid"
+        variant="destructive"
+        onConfirm={executeCancelBid}
+      />
+    </>
   );
 }

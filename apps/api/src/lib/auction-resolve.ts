@@ -62,7 +62,7 @@ export async function resolveAuctionIfEnded(auctionId: string) {
         where: { status: "accepted" },
         orderBy: { amount: "desc" },
         take: 1,
-        include: { bidder: { select: { id: true, name: true, mobileNumber: true } } },
+        include: { bidder: { select: { name: true } } },
       },
     },
   });

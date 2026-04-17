@@ -32,6 +32,7 @@ export default async function AuctionPage({ params }: { params: Promise<{ id: st
       title: string;
       basePrice: unknown;
       coverImageUrl?: string | null;
+      imageUrls?: string[];
       seller: { id: string; name: string | null };
       category: { name: string };
       cities: { city: { name: string } }[];

@@ -3,6 +3,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "./db.js";
 import { BIDS_QUEUE, getRabbitChannel } from "./rabbit.js";
 import { getRedis } from "./redis.js";
+import { publicBidderLabel } from "./lib/public-bidder.js";
 
 export type BidMessage = {
   auctionId: string;
@@ -55,11 +56,11 @@ export async function broadcastAuctionState(auctionId: string) {
   const latest = await prisma.bid.findFirst({
     where: { auctionId, status: "accepted" },
     orderBy: { amount: "desc" },
-    include: { bidder: { select: { id: true, name: true, mobileNumber: true } } },
+    include: { bidder: { select: { name: true } } },
   });
   await broadcastAuction(auctionId, {
     highest: latest
-      ? { amount: latest.amount.toString(), bidderName: latest.bidder.name ?? latest.bidder.mobileNumber }
+      ? { amount: latest.amount.toString(), bidderName: publicBidderLabel(latest.bidder.name) }
       : null,
     bidId: latest?.id ?? null,
   });
@@ -135,11 +136,11 @@ async function processBid(data: BidMessage) {
   const latest = await prisma.bid.findFirst({
     where: { auctionId: data.auctionId, status: "accepted" },
     orderBy: { amount: "desc" },
-    include: { bidder: { select: { id: true, name: true, mobileNumber: true } } },
+    include: { bidder: { select: { name: true } } },
   });
   await broadcastAuction(data.auctionId, {
     highest: latest
-      ? { amount: latest.amount.toString(), bidderName: latest.bidder.name ?? latest.bidder.mobileNumber }
+      ? { amount: latest.amount.toString(), bidderName: publicBidderLabel(latest.bidder.name) }
       : null,
     bidId: data.bidId,
   });

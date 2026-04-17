@@ -1,24 +1,22 @@
-import type { Metadata } from "next";
-import { Metrophobic, Poppins } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-poppins",
-  weight: ["400", "500", "600", "700"],
-});
-
-const metrophobic = Metrophobic({
-  subsets: ["latin"],
-  variable: "--font-metrophobic",
-  weight: "400",
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "AuctIt — Live auctions",
   description: "Online auctions by city and category",
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -28,9 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${poppins.variable} ${metrophobic.variable} min-h-screen font-sans text-base antialiased md:text-[17px]`}
-      >
+      <body className={`${inter.variable} min-h-screen font-sans text-base antialiased md:text-[17px]`}>
         <Providers>
           <SiteHeader />
           <main>{children}</main>

@@ -5,11 +5,17 @@ import { env } from "../env.js";
 import { requireUser } from "../lib/auth.js";
 
 const mobileSchema = z.object({
-  mobileNumber: z.string().min(10).max(15),
+  mobileNumber: z
+    .string()
+    .min(10, "Enter a valid mobile number (at least 10 digits).")
+    .max(15, "Mobile number is too long."),
 });
 
 const verifySchema = mobileSchema.extend({
-  otp: z.string().min(4).max(8),
+  otp: z
+    .string()
+    .min(4, "Enter the OTP you received.")
+    .max(8, "OTP is too long."),
 });
 
 export async function registerAuthRoutes(app: FastifyInstance) {
@@ -56,7 +62,12 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       });
     }
     const token = await reply.jwtSign({ sub: user.id, mobile: user.mobileNumber });
-    return reply.send({ token, user: { id: user.id, mobileNumber: user.mobileNumber, name: user.name } });
+    const needsProfile = !user.name?.trim();
+    return reply.send({
+      token,
+      user: { id: user.id, name: user.name },
+      needsProfile,
+    });
   });
 
   app.get("/v1/me", { preHandler: requireUser }, async (req, reply) => {
@@ -64,6 +75,14 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { id: sub } });
     if (!user) return reply.status(404).send({ error: "Not found" });
     const kyc = await prisma.sellerKycProfile.findUnique({ where: { userId: user.id } });
-    return reply.send({ user, kyc });
+    return reply.send({
+      user: {
+        id: user.id,
+        name: user.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      kyc,
+    });
   });
 }

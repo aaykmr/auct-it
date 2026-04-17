@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -17,13 +17,16 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLoginSheet } from "@/components/login-sheet-provider";
 import { useIsLoggedIn } from "@/lib/use-auth";
-import { setStoredToken } from "@/lib/api";
-import { Moon, Sun } from "lucide-react";
+import { api, getStoredToken, PROFILE_UPDATE_EVENT, setStoredToken } from "@/lib/api";
+import { Moon, Sun, UserRound } from "lucide-react";
 
 export function SiteHeader() {
   const { setTheme } = useTheme();
@@ -31,6 +34,24 @@ export function SiteHeader() {
   const loggedIn = useIsLoggedIn();
   const { openLogin } = useLoginSheet();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [profileName, setProfileName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loggedIn) {
+      setProfileName(null);
+      return;
+    }
+    const token = getStoredToken();
+    if (!token) return;
+    const load = () => {
+      void api<{ user: { name: string | null } }>("/v1/me", { token })
+        .then((r) => setProfileName(r.user.name?.trim() || null))
+        .catch(() => setProfileName(null));
+    };
+    load();
+    window.addEventListener(PROFILE_UPDATE_EVENT, load);
+    return () => window.removeEventListener(PROFILE_UPDATE_EVENT, load);
+  }, [loggedIn]);
 
   function confirmLogout() {
     setStoredToken(null);
@@ -58,20 +79,44 @@ export function SiteHeader() {
           <Link href="/seller" className="text-muted-foreground hover:text-foreground">
             Sell
           </Link>
-          {loggedIn && (
-            <>
-              <Link href="/me/selling" className="text-muted-foreground hover:text-foreground">
-                Selling
-              </Link>
-              <Link href="/me/bidding" className="text-muted-foreground hover:text-foreground">
-                My bids
-              </Link>
-            </>
-          )}
           {loggedIn ? (
-            <Button size="sm" variant="secondary" type="button" onClick={() => setLogoutOpen(true)}>
-              Log out
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-2")}
+                aria-label="Account menu"
+              >
+                <UserRound className="size-4 shrink-0" />
+                <span className="max-w-[8rem] truncate">{profileName ?? "Account"}</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[12rem]">
+                {profileName && (
+                  <>
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="font-normal">{profileName}</DropdownMenuLabel>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    router.push("/me/bidding");
+                  }}
+                >
+                  My bids
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    router.push("/me/selling");
+                  }}
+                >
+                  My items
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => setLogoutOpen(true)}>
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button size="sm" variant="secondary" type="button" onClick={() => openLogin()}>
               Sign in

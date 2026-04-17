@@ -20,5 +20,7 @@ export function Countdown({ endAt }: { endAt: string }) {
     return () => clearInterval(id);
   }, [endAt]);
 
-  return <span className="font-mono text-sm tabular-nums text-secondary">{left}</span>;
+  return (
+    <span className="font-mono text-base font-semibold tabular-nums text-foreground">{left}</span>
+  );
 }

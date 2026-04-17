@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
+import { ZodError } from "zod";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import websocket from "@fastify/websocket";
@@ -25,6 +26,7 @@ import { registerHelpRoutes } from "./routes/help.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPaymentRoutes } from "./routes/payments.js";
 import { registerWsRoutes } from "./routes/ws.js";
+import { zodErrorToClientMessage } from "./lib/validation-error.js";
 
 export async function buildApp() {
   await mkdir(env.UPLOAD_DIR, { recursive: true });
@@ -67,6 +69,14 @@ export async function buildApp() {
   await registerHelpRoutes(app);
   await registerPaymentRoutes(app);
   await registerWsRoutes(app);
+
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof ZodError) {
+      void reply.status(400).send({ error: zodErrorToClientMessage(error) });
+      return;
+    }
+    void reply.send(error);
+  });
 
   return app;
 }

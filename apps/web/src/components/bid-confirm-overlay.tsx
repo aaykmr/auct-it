@@ -56,7 +56,7 @@ export function BidConfirmOverlay({
   return (
     <div
       className={cn(
-        "absolute inset-0 z-20 flex flex-col justify-end overflow-hidden rounded-[inherit]",
+        "fixed inset-0 z-[100] flex flex-col justify-end overflow-hidden bg-transparent",
         !animIn && "pointer-events-none",
       )}
       aria-modal="true"
@@ -74,7 +74,7 @@ export function BidConfirmOverlay({
       />
       <div
         className={cn(
-          "relative border-t border-border bg-card/98 p-4 shadow-[0_-12px_40px_-8px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-card/95 dark:shadow-[0_-12px_40px_-8px_rgba(0,0,0,0.55)]",
+          "relative border-t border-border bg-card/98 p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] shadow-[0_-12px_40px_-8px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-card/95 dark:shadow-[0_-12px_40px_-8px_rgba(0,0,0,0.55)]",
           animIn ? "translate-y-0" : "translate-y-full",
         )}
       >
