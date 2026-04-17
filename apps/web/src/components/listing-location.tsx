@@ -23,7 +23,11 @@ export function ListingLocationLine({
   iconClassName = "size-5 shrink-0 text-muted-foreground",
   variant = "block",
 }: ListingLocationLineProps) {
-  const text = cities.map((c) => c.city.name).join(separator).trim();
+  const text = cities
+    .map((c) => c?.city?.name)
+    .filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+    .join(separator)
+    .trim();
   if (!text) return null;
 
   const inner = (

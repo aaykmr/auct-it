@@ -5,7 +5,23 @@ import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-export function AuctionBidHeader({ endAt, className }: { endAt: string; className?: string }) {
+export function AuctionBidHeader({
+  endAt,
+  className,
+  variant = "live",
+}: {
+  endAt: string;
+  className?: string;
+  variant?: "live" | "ended";
+}) {
+  if (variant === "ended") {
+    return (
+      <CardHeader className={className}>
+        <CardTitle className="text-base md:text-lg">Auction ended</CardTitle>
+        <p className="text-muted-foreground text-xs md:text-sm">Ended {new Date(endAt).toLocaleString()}</p>
+      </CardHeader>
+    );
+  }
   return (
     <CardHeader className={className}>
       <CardTitle className="text-base md:text-lg">Place a bid</CardTitle>

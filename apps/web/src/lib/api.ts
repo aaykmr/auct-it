@@ -15,6 +15,14 @@ export const AUTH_CHANGE_EVENT = "auctit-auth-change";
 /** Fired after profile fields (e.g. display name) change so UI can refetch `/v1/me`. */
 export const PROFILE_UPDATE_EVENT = "auctit-profile-update";
 
+/** Fired when notification-relevant state changes (e.g. after visit actions). */
+export const NOTIFICATIONS_REFRESH_EVENT = "auctit-notifications-refresh";
+
+export function dispatchNotificationsRefresh() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(NOTIFICATIONS_REFRESH_EVENT));
+}
+
 export function dispatchProfileUpdate() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PROFILE_UPDATE_EVENT));

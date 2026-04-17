@@ -11,7 +11,17 @@ export async function registerFulfillmentRoutes(app: FastifyInstance) {
     const rows = await prisma.orderFulfillment.findMany({
       where: { OR: [{ buyerId: userId }, { sellerId: userId }] },
       include: {
-        auction: { include: { listing: true } },
+        auction: {
+          include: {
+            listing: {
+              include: {
+                category: true,
+                cities: { include: { city: true } },
+                images: { orderBy: { sortOrder: "asc" as const }, take: 1 },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

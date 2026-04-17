@@ -26,9 +26,11 @@ export default async function AuctionPage({ params }: { params: Promise<{ id: st
   const data = await res.json();
   const auction = data.auction as {
     id: string;
+    status: string;
     endAt: string;
     currentBid: string | null;
     listing: {
+      id: string;
       title: string;
       basePrice: unknown;
       coverImageUrl?: string | null;
@@ -39,6 +41,7 @@ export default async function AuctionPage({ params }: { params: Promise<{ id: st
     };
   };
   const initial = {
+    status: auction.status,
     endAt: auction.endAt,
     currentBid: auction.currentBid,
     listing: {

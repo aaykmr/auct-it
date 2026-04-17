@@ -24,6 +24,8 @@ model User {
   orderFulfillmentsSeller OrderFulfillment[] @relation("SellerFulfillments")
   disputesRaised       OrderDispute[]          @relation("DisputeRaisedBy")
   paymentOrders        PaymentOrder[]
+  sellerVisitReminderDismissals SellerVisitReminderDismissal[]
+  visitSlotBuyerCancellations   VisitSlotBuyerCancellation[]
 }
 
 model OtpSession {
@@ -77,7 +79,7 @@ model Listing {
 
   cities   ListingCity[]
   auctions Auction[]
-  slots    InspectionSlot[]
+  slots    InspectionSlot[] @relation("ListingSlots")
   images   ListingImage[]
 
   @@index([sellerId])
@@ -261,13 +263,16 @@ enum InspectionSlotStatus {
 
 model InspectionSlot {
   id               String                 @id @default(cuid())
-  listingId        String
-  listing          Listing                @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  /** When null, slot is seller-wide (any won auction from this seller). */
+  listingId        String?
+  listing          Listing?               @relation("ListingSlots", fields: [listingId], references: [id], onDelete: Cascade)
   sellerId         String
   cityId           String
   city             City                   @relation(fields: [cityId], references: [id])
   addressSummary   String
   addressFull      String?
+  /** Google Maps (or other) link; shown to buyers only after visit fee is paid. */
+  mapsUrl          String?
   startAt          DateTime
   endAt            DateTime
   maxBuyerCapacity Int                    @default(20)
@@ -278,6 +283,55 @@ model InspectionSlot {
   reports   InspectionReport[]
   visitFees VisitFeeOrder[]
   accessTokens VisitAccessToken[]
+  buyerCancellations VisitSlotBuyerCancellation[] @relation("CancelledSlot")
+  moveTargets        VisitSlotBuyerCancellation[] @relation("MoveTargetSlot")
+
+  @@index([sellerId, status, endAt])
+}
+
+model SellerVisitReminderDismissal {
+  id           String   @id @default(cuid())
+  sellerId     String
+  seller       User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  sourceSlotId String
+  dismissedAt  DateTime @default(now())
+
+  @@unique([sellerId, sourceSlotId])
+  @@index([sellerId])
+}
+
+enum VisitCancellationResolution {
+  pending
+  refund_requested
+  reschedule_chosen
+  refunded
+  completed_move
+}
+
+model VisitSlotBuyerCancellation {
+  id             String                      @id @default(cuid())
+  slotId         String
+  slot           InspectionSlot              @relation("CancelledSlot", fields: [slotId], references: [id], onDelete: Cascade)
+  buyerId        String
+  buyer          User                        @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  resolution     VisitCancellationResolution @default(pending)
+  targetSlotId   String?
+  targetSlot     InspectionSlot?             @relation("MoveTargetSlot", fields: [targetSlotId], references: [id], onDelete: SetNull)
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+
+  @@unique([slotId, buyerId])
+  @@index([buyerId, resolution])
+}
+
+model OutboundMessageLog {
+  id               String   @id @default(cuid())
+  idempotencyKey   String   @unique
+  channel          String
+  toPhone          String
+  bodyPreview      String?
+  status           String   @default("sent")
+  createdAt        DateTime @default(now())
 }
 
 enum AttendeeStatus {

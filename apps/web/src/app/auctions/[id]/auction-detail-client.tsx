@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { AuctionImageCarousel } from "@/components/auction-image-carousel";
 import { ListingLocationLine } from "@/components/listing-location";
 import { AuctionBidFields, AuctionBidHeader } from "@/app/auctions/[id]/auction-bid-panel";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -36,9 +37,11 @@ export function AuctionDetailClient({
   auctionId: string;
   sellerId: string;
   initial: {
+    status: string;
     endAt: string;
     currentBid: string | null;
     listing: {
+      id: string;
       title: string;
       basePrice: string;
       coverImageUrl?: string | null;
@@ -62,7 +65,12 @@ export function AuctionDetailClient({
     myLatestBidAmount: string | null;
   } | null>(null);
   const [bidSheetOpen, setBidSheetOpen] = useState(false);
+  const [participation, setParticipation] = useState<{
+    role: "buyer" | "seller" | "none";
+    fulfillment: { id: string; status: string; mode: string } | null;
+  } | null>(null);
 
+  const auctionEnded = initial.status === "ended";
   const minNext = Number(current ?? initial.listing.basePrice) + 0.01;
   const currentDisplay = current ?? initial.listing.basePrice;
 
@@ -77,9 +85,27 @@ export function AuctionDetailClient({
       .catch(() => setIsSellerViewer(false));
   }, [sellerId]);
 
+  useEffect(() => {
+    if (!auctionEnded) {
+      setParticipation(null);
+      return;
+    }
+    const token = getStoredToken();
+    if (!token) {
+      setParticipation(null);
+      return;
+    }
+    void api<{
+      role: "buyer" | "seller" | "none";
+      fulfillment: { id: string; status: string; mode: string } | null;
+    }>(`/v1/auctions/${auctionId}/participation`, { token })
+      .then(setParticipation)
+      .catch(() => setParticipation(null));
+  }, [auctionId, auctionEnded]);
+
   const loadBidMine = useCallback(async () => {
     const token = getStoredToken();
-    if (!token || isSellerViewer) {
+    if (!token || isSellerViewer || auctionEnded) {
       setBidMine(null);
       return;
     }
@@ -92,7 +118,7 @@ export function AuctionDetailClient({
     } catch {
       setBidMine(null);
     }
-  }, [auctionId, isSellerViewer]);
+  }, [auctionId, isSellerViewer, auctionEnded]);
 
   useEffect(() => {
     void loadBidMine();
@@ -158,6 +184,7 @@ export function AuctionDetailClient({
   }
 
   function openMobileBidEntry() {
+    if (auctionEnded) return;
     if (isSellerViewer) return;
     if (!getStoredToken()) {
       openLogin({
@@ -199,7 +226,7 @@ export function AuctionDetailClient({
     void loadBidMine();
   }
 
-  const showMobileBidBar = isSellerViewer === false;
+  const showMobileBidBar = isSellerViewer === false && !auctionEnded;
 
   return (
     <>
@@ -224,6 +251,32 @@ export function AuctionDetailClient({
               iconClassName="size-5 shrink-0 text-muted-foreground md:size-6"
             />
           </div>
+          {auctionEnded && (
+            <Card className="lg:hidden">
+              <AuctionBidHeader variant="ended" endAt={initial.endAt} />
+              <CardContent className="space-y-3">
+                {participation?.role === "buyer" && (
+                  <Link
+                    href={`/listings/${initial.listing.id}/schedule`}
+                    className={cn(buttonVariants({ variant: "default", size: "default" }), "w-full")}
+                  >
+                    Schedule visit
+                  </Link>
+                )}
+                {participation?.role === "seller" && (
+                  <Link
+                    href="/seller/visits"
+                    className={cn(buttonVariants({ variant: "secondary", size: "default" }), "w-full")}
+                  >
+                    Manage visit slots
+                  </Link>
+                )}
+                {participation && participation.role === "none" && (
+                  <p className="text-muted-foreground text-sm">This auction has ended.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">Recent bids</CardTitle>
@@ -259,20 +312,49 @@ export function AuctionDetailClient({
         </div>
         <div className="hidden lg:col-span-1 lg:block">
           <Card className="sticky top-20">
-            <AuctionBidHeader endAt={initial.endAt} />
-            <CardContent className="space-y-3">
-              <AuctionBidFields
-                isSellerViewer={isSellerViewer}
-                currentDisplay={currentDisplay}
-                minNext={minNext}
-                amount={amount}
-                onAmountChange={setAmount}
-                onRequestBid={requestBid}
-                bidMine={bidMine}
-                onCancelClick={() => setCancelConfirmOpen(true)}
-                msg={msg}
-              />
-            </CardContent>
+            {auctionEnded ? (
+              <>
+                <AuctionBidHeader variant="ended" endAt={initial.endAt} />
+                <CardContent className="space-y-3">
+                  {participation?.role === "buyer" && (
+                    <Link
+                      href={`/listings/${initial.listing.id}/schedule`}
+                      className={cn(buttonVariants({ variant: "default", size: "default" }), "w-full")}
+                    >
+                      Schedule visit
+                    </Link>
+                  )}
+                  {participation?.role === "seller" && (
+                    <Link
+                      href="/seller/visits"
+                      className={cn(buttonVariants({ variant: "secondary", size: "default" }), "w-full")}
+                    >
+                      Manage visit slots
+                    </Link>
+                  )}
+                  {participation && participation.role === "none" && (
+                    <p className="text-muted-foreground text-sm">This auction has ended.</p>
+                  )}
+                </CardContent>
+              </>
+            ) : (
+              <>
+                <AuctionBidHeader endAt={initial.endAt} />
+                <CardContent className="space-y-3">
+                  <AuctionBidFields
+                    isSellerViewer={isSellerViewer}
+                    currentDisplay={currentDisplay}
+                    minNext={minNext}
+                    amount={amount}
+                    onAmountChange={setAmount}
+                    onRequestBid={requestBid}
+                    bidMine={bidMine}
+                    onCancelClick={() => setCancelConfirmOpen(true)}
+                    msg={msg}
+                  />
+                </CardContent>
+              </>
+            )}
           </Card>
         </div>
       </div>
@@ -285,34 +367,36 @@ export function AuctionDetailClient({
         </div>
       )}
 
-      <Sheet open={bidSheetOpen} onOpenChange={setBidSheetOpen}>
-        <SheetContent
-          side="bottom"
-          showCloseButton
-          className="max-h-[min(90dvh,720px)] gap-0 rounded-t-xl p-0 sm:mx-auto sm:max-w-lg"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Place a bid</SheetTitle>
-            <SheetDescription>Current auction price and bid form.</SheetDescription>
-          </SheetHeader>
-          <div className="flex max-h-[min(90dvh,720px)] flex-col">
-            <AuctionBidHeader endAt={initial.endAt} className="shrink-0 border-b" />
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
-              <AuctionBidFields
-                isSellerViewer={isSellerViewer}
-                currentDisplay={currentDisplay}
-                minNext={minNext}
-                amount={amount}
-                onAmountChange={setAmount}
-                onRequestBid={requestBid}
-                bidMine={bidMine}
-                onCancelClick={() => setCancelConfirmOpen(true)}
-                msg={msg}
-              />
+      {!auctionEnded && (
+        <Sheet open={bidSheetOpen} onOpenChange={setBidSheetOpen}>
+          <SheetContent
+            side="bottom"
+            showCloseButton
+            className="max-h-[min(90dvh,720px)] gap-0 rounded-t-xl p-0 sm:mx-auto sm:max-w-lg"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Place a bid</SheetTitle>
+              <SheetDescription>Current auction price and bid form.</SheetDescription>
+            </SheetHeader>
+            <div className="flex max-h-[min(90dvh,720px)] flex-col">
+              <AuctionBidHeader endAt={initial.endAt} className="shrink-0 border-b" />
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+                <AuctionBidFields
+                  isSellerViewer={isSellerViewer}
+                  currentDisplay={currentDisplay}
+                  minNext={minNext}
+                  amount={amount}
+                  onAmountChange={setAmount}
+                  onRequestBid={requestBid}
+                  bidMine={bidMine}
+                  onCancelClick={() => setCancelConfirmOpen(true)}
+                  msg={msg}
+                />
+              </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
+      )}
 
       <BidConfirmOverlay
         open={placeConfirmOpen}

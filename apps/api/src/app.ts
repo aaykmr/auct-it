@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
@@ -24,6 +24,7 @@ import { registerFulfillmentRoutes } from "./routes/fulfillment.js";
 import { registerDisputeRoutes } from "./routes/disputes.js";
 import { registerHelpRoutes } from "./routes/help.js";
 import { registerMeRoutes } from "./routes/me.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerPaymentRoutes } from "./routes/payments.js";
 import { registerWsRoutes } from "./routes/ws.js";
 import { zodErrorToClientMessage } from "./lib/validation-error.js";
@@ -33,6 +34,20 @@ export async function buildApp() {
 
   const app = Fastify({ logger: true });
   app.decorate("prisma", prisma);
+
+  app.addHook("preParsing", async (request, _reply, payload) => {
+    const url = request.url ?? "";
+    if (!url.includes("/v1/webhooks/cashfree")) {
+      return payload;
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of payload) {
+      chunks.push(chunk);
+    }
+    const raw = Buffer.concat(chunks);
+    (request as FastifyRequest & { rawBody?: string }).rawBody = raw.toString("utf8");
+    return raw;
+  });
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, {
@@ -58,6 +73,7 @@ export async function buildApp() {
   await registerMetaRoutes(app);
   await registerAuthRoutes(app);
   await registerMeRoutes(app);
+  await registerNotificationRoutes(app);
   await registerKycRoutes(app);
   await registerListingRoutes(app);
   await registerListingImageRoutes(app);

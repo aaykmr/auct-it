@@ -26,6 +26,7 @@ import {
 import { useLoginSheet } from "@/components/login-sheet-provider";
 import { useIsLoggedIn } from "@/lib/use-auth";
 import { api, getStoredToken, PROFILE_UPDATE_EVENT, setStoredToken } from "@/lib/api";
+import { NotificationBell } from "@/components/notification-bell";
 import { MoonIcon, SunIcon, UserIcon } from "@phosphor-icons/react";
 
 export function SiteHeader() {
@@ -106,6 +107,13 @@ export function SiteHeader() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
+                    router.push("/me/won");
+                  }}
+                >
+                  Won bids
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
                     router.push("/me/selling");
                   }}
                 >
@@ -122,6 +130,7 @@ export function SiteHeader() {
               Sign in
             </Button>
           )}
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}

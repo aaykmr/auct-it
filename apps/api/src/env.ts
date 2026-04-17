@@ -15,6 +15,8 @@ const envSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PUBLIC_WEB_URL: z.string().default("http://localhost:3000"),
+  PUBLIC_API_URL: z.string().default("http://127.0.0.1:4000"),
+  CASHFREE_SANDBOX: z.enum(["true", "false"]).default("true"),
   CASHFREE_APP_ID: z.string().optional(),
   CASHFREE_SECRET_KEY: z.string().optional(),
   CASHFREE_WEBHOOK_SECRET: z.string().optional(),
@@ -53,6 +55,8 @@ export const env = {
       : parsed.REQUIRE_SELLER_KYC === "false"
         ? false
         : parsed.NODE_ENV === "production",
+  /** Use Cashfree Payment Gateway sandbox host. */
+  cashfreeSandbox: parsed.CASHFREE_SANDBOX === "true",
 };
 
 export type Env = typeof env;

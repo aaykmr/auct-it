@@ -17,6 +17,9 @@ export default function SellerPage() {
         <Link href="/seller/listings/new" className={cn(buttonVariants({ variant: "secondary" }))}>
           New listing
         </Link>
+        <Link href="/seller/visits" className={cn(buttonVariants({ variant: "outline" }))}>
+          Visit slots
+        </Link>
       </div>
     </div>
   );

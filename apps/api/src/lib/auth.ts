@@ -10,6 +10,21 @@ export async function requireUser(req: FastifyRequest, reply: FastifyReply) {
   }
 }
 
+/** Verifies JWT when `Authorization: Bearer` is present; otherwise leaves `req.user` unset. */
+export async function optionalUser(
+  req: FastifyRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Fastify preHandler signature
+  _reply: FastifyReply,
+) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) return;
+  try {
+    await req.jwtVerify();
+  } catch {
+    /* invalid or expired token — treat as anonymous */
+  }
+}
+
 export async function requireVerifiedSeller(req: FastifyRequest, reply: FastifyReply) {
   await requireUser(req, reply);
   if (reply.sent) return;

@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { resolveAuctionIfEnded } from "../lib/auction-resolve.js";
 import { publicBidderLabel } from "../lib/public-bidder.js";
-import { requireVerifiedSeller } from "../lib/auth.js";
+import { requireUser, requireVerifiedSeller } from "../lib/auth.js";
 
 export async function registerAuctionRoutes(app: FastifyInstance) {
   app.post("/v1/listings/:listingId/auction", { preHandler: requireVerifiedSeller }, async (req, reply) => {
@@ -137,6 +137,29 @@ export async function registerAuctionRoutes(app: FastifyInstance) {
         },
         currentBid: bids[0]?.amount?.toString() ?? null,
       },
+    });
+  });
+
+  app.get("/v1/auctions/:id/participation", { preHandler: requireUser }, async (req, reply) => {
+    const userId = (req.user as { sub: string }).sub;
+    const params = z.object({ id: z.string() }).parse(req.params);
+    await resolveAuctionIfEnded(params.id);
+    const auction = await prisma.auction.findUnique({
+      where: { id: params.id },
+      include: { listing: { select: { id: true, sellerId: true } } },
+    });
+    if (!auction) return reply.status(404).send({ error: "Not found" });
+    const fulfillment = await prisma.orderFulfillment.findUnique({
+      where: { auctionId: params.id },
+    });
+    let role: "buyer" | "seller" | "none" = "none";
+    if (auction.listing.sellerId === userId) role = "seller";
+    if (fulfillment?.buyerId === userId) role = "buyer";
+    return reply.send({
+      role,
+      fulfillment: fulfillment
+        ? { id: fulfillment.id, status: fulfillment.status, mode: fulfillment.mode }
+        : null,
     });
   });
 
