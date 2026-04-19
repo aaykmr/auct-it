@@ -32,7 +32,7 @@ import { zodErrorToClientMessage } from "./lib/validation-error.js";
 export async function buildApp() {
   await mkdir(env.UPLOAD_DIR, { recursive: true });
 
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, trustProxy: env.trustProxy });
   app.decorate("prisma", prisma);
 
   app.addHook("preParsing", async (request, _reply, payload) => {

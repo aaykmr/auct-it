@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { BidConfirmPanel } from "@/components/bid-confirm-panel";
 import { cn } from "@/lib/utils";
 
 const DURATION_MS = 320;
@@ -28,6 +28,7 @@ export function BidConfirmOverlay({
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
   const [animIn, setAnimIn] = useState(false);
+  const [pendingBlockEscape, setPendingBlockEscape] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -45,11 +46,11 @@ export function BidConfirmOverlay({
   useEffect(() => {
     if (!open || !mounted) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onOpenChange(false);
+      if (e.key === "Escape" && !pendingBlockEscape) onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, mounted, onOpenChange]);
+  }, [open, mounted, pendingBlockEscape, onOpenChange]);
 
   if (!mounted) return null;
 
@@ -68,9 +69,14 @@ export function BidConfirmOverlay({
         className={cn(
           "absolute inset-0 bg-background/75 backdrop-blur-[3px] transition-[opacity] duration-300 ease-out",
           animIn ? "opacity-100" : "opacity-0",
+          pendingBlockEscape && "cursor-wait",
         )}
         aria-label="Dismiss"
-        onClick={() => onOpenChange(false)}
+        disabled={pendingBlockEscape}
+        onClick={() => {
+          if (pendingBlockEscape) return;
+          onOpenChange(false);
+        }}
       />
       <div
         className={cn(
@@ -78,35 +84,17 @@ export function BidConfirmOverlay({
           animIn ? "translate-y-0" : "translate-y-full",
         )}
       >
-        <h3 id={titleId} className="font-heading text-lg font-semibold md:text-xl">
-          {title}
-        </h3>
-        <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed md:text-base">{description}</p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:w-auto md:text-base"
-            onClick={() => onOpenChange(false)}
-          >
-            {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={variant === "destructive" ? "destructive" : "default"}
-            className="w-full sm:w-auto md:text-base"
-            onClick={async () => {
-              try {
-                await Promise.resolve(onConfirm());
-                onOpenChange(false);
-              } catch {
-                /* caller surfaces error */
-              }
-            }}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
+        <BidConfirmPanel
+          titleId={titleId}
+          title={title}
+          description={description}
+          confirmLabel={confirmLabel}
+          cancelLabel={cancelLabel}
+          variant={variant}
+          onConfirm={onConfirm}
+          onDismiss={() => onOpenChange(false)}
+          onPendingChange={setPendingBlockEscape}
+        />
       </div>
     </div>
   );

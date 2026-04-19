@@ -18,14 +18,23 @@ type AuctionRow = {
   };
 };
 
-export function AuctionGrid({ auctions }: { auctions: AuctionRow[] }) {
+export function AuctionGrid({
+  auctions,
+  variant = "live",
+}: {
+  auctions: AuctionRow[];
+  variant?: "live" | "recent";
+}) {
   if (auctions.length === 0) {
     return (
       <p className="text-muted-foreground py-12 text-center text-sm">
-        No live auctions match your filters. Try adjusting cities or category.
+        {variant === "recent"
+          ? "No recently ended auctions in the last 2 days for these filters."
+          : "No live auctions match your filters. Try adjusting cities or category."}
       </p>
     );
   }
+  const isRecent = variant === "recent";
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-4">
       {auctions.map((a) => (
@@ -54,14 +63,20 @@ export function AuctionGrid({ auctions }: { auctions: AuctionRow[] }) {
             </CardContent>
             <CardFooter className="flex flex-col items-stretch gap-1 border-t bg-muted/30 p-3">
               <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Current bid</span>
+                <span className="text-muted-foreground">{isRecent ? "Final bid" : "Current bid"}</span>
                 <span className="font-semibold text-primary">
                   ₹{a.currentBid ?? a.listing.basePrice}
                 </span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Ends in</span>
-                <Countdown endAt={a.endAt} />
+                <span className="text-muted-foreground">{isRecent ? "Ended" : "Ends in"}</span>
+                {isRecent ? (
+                  <span className="text-right font-medium tabular-nums">
+                    {new Date(a.endAt).toLocaleString()}
+                  </span>
+                ) : (
+                  <Countdown endAt={a.endAt} />
+                )}
               </div>
             </CardFooter>
           </Card>

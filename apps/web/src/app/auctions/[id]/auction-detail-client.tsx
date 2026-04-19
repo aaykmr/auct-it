@@ -10,11 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BidConfirmOverlay } from "@/components/bid-confirm-overlay";
+import { BidConfirmPanel } from "@/components/bid-confirm-panel";
 import { useLoginSheet } from "@/components/login-sheet-provider";
 import { useToast } from "@/components/toast-provider";
 import { api, getStoredToken } from "@/lib/api";
 import { clearPendingBid, getPendingBid, setPendingBid } from "@/lib/pending-bid";
 import { auctionWebSocketUrl } from "@/lib/ws";
+import { useIsLg } from "@/lib/use-is-lg";
 import { cn } from "@/lib/utils";
 
 type BidRow = { id: string; amount: string; createdAt: string; bidder: string };
@@ -69,6 +71,8 @@ export function AuctionDetailClient({
     role: "buyer" | "seller" | "none";
     fulfillment: { id: string; status: string; mode: string } | null;
   } | null>(null);
+
+  const isLg = useIsLg();
 
   const auctionEnded = initial.status === "ended";
   const minNext = Number(current ?? initial.listing.basePrice) + 0.01;
@@ -153,6 +157,20 @@ export function AuctionDetailClient({
     return () => ws.close();
   }, [auctionId, loadBids, loadBidMine]);
 
+  const refreshAuctionCurrent = useCallback(async () => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 280));
+      }
+      try {
+        const r = await api<{ auction: { currentBid: string | null } }>(`/v1/auctions/${auctionId}`);
+        setCurrent(r.auction.currentBid);
+      } catch {
+        /* try next attempt */
+      }
+    }
+  }, [auctionId]);
+
   function validateAmountForBid(): number | null {
     setMsg(null);
     const n = Number(amount);
@@ -212,18 +230,22 @@ export function AuctionDetailClient({
     }
     clearPendingBid();
     setAmount("");
+    setBidSheetOpen(false);
     showToast(`Bid placed for ₹${n.toFixed(2)}`);
     void loadBids();
     void loadBidMine();
+    void refreshAuctionCurrent();
   }
 
   async function executeCancelBid() {
     const token = getStoredToken();
     if (!token) throw new Error("Not signed in");
     await api(`/v1/auctions/${auctionId}/bids/mine`, { method: "DELETE", token });
+    setBidSheetOpen(false);
     showToast("Bid cancelled");
     void loadBids();
     void loadBidMine();
+    void refreshAuctionCurrent();
   }
 
   const showMobileBidBar = isSellerViewer === false && !auctionEnded;
@@ -352,6 +374,36 @@ export function AuctionDetailClient({
                     onCancelClick={() => setCancelConfirmOpen(true)}
                     msg={msg}
                   />
+                  {isLg && placeConfirmOpen && (
+                    <BidConfirmPanel
+                      className="rounded-lg border border-border bg-muted/50 p-3"
+                      title="Confirm bid"
+                      description={`Place bid of ₹${Number(amount).toFixed(2)}?`}
+                      confirmLabel="Confirm bid"
+                      cancelLabel="Decline"
+                      onConfirm={executePlaceBid}
+                      onDismiss={() => {
+                        setPlaceConfirmOpen(false);
+                        clearPendingBid();
+                      }}
+                    />
+                  )}
+                  {isLg && cancelConfirmOpen && !placeConfirmOpen && (
+                    <BidConfirmPanel
+                      className="rounded-lg border border-border bg-muted/50 p-3"
+                      title="Cancel bid"
+                      description={
+                        bidMine?.myLatestBidAmount
+                          ? `Withdraw your bid of ₹${bidMine.myLatestBidAmount}? The next highest bid will become current.`
+                          : "Withdraw your bid?"
+                      }
+                      confirmLabel="Cancel bid"
+                      cancelLabel="Keep bid"
+                      variant="destructive"
+                      onConfirm={executeCancelBid}
+                      onDismiss={() => setCancelConfirmOpen(false)}
+                    />
+                  )}
                 </CardContent>
               </>
             )}
@@ -399,7 +451,7 @@ export function AuctionDetailClient({
       )}
 
       <BidConfirmOverlay
-        open={placeConfirmOpen}
+        open={placeConfirmOpen && !isLg}
         onOpenChange={(o) => {
           setPlaceConfirmOpen(o);
           if (!o) clearPendingBid();
@@ -411,7 +463,7 @@ export function AuctionDetailClient({
         onConfirm={executePlaceBid}
       />
       <BidConfirmOverlay
-        open={cancelConfirmOpen}
+        open={cancelConfirmOpen && !isLg}
         onOpenChange={setCancelConfirmOpen}
         title="Cancel bid"
         description={

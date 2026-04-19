@@ -111,14 +111,24 @@ export async function registerListingRoutes(app: FastifyInstance) {
       prisma.listing.count({ where }),
       prisma.listing.findMany({
         where,
-        include: { category: true, cities: { include: { city: true } }, auctions: true },
+        include: {
+          category: true,
+          cities: { include: { city: true } },
+          auctions: true,
+          images: { orderBy: { sortOrder: "asc" }, take: 1 },
+        },
         orderBy: { createdAt: "desc" },
         skip,
         take: q.pageSize,
       }),
     ]);
+    const listings = rows.map((row) => {
+      const coverImageUrl = row.images[0]?.url ?? null;
+      const { images, ...rest } = row;
+      return { ...rest, coverImageUrl };
+    });
     return reply.send({
-      listings: rows,
+      listings,
       total,
       page: q.page,
       pageSize: q.pageSize,

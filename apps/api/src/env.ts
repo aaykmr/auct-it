@@ -39,6 +39,8 @@ const envSchema = z.object({
    * Use **bucket policy** `s3:GetObject` on `listings/*` for public URLs. Set `public-read` only if the bucket has ACLs enabled; IAM needs `s3:PutObjectAcl`.
    */
   S3_OBJECT_ACL: z.enum(["public-read", "none"]).default("none"),
+  /** When `true`, trust `X-Forwarded-For` for client IP (e.g. behind nginx/ALB). Used for geo hints. */
+  TRUST_PROXY: z.enum(["true", "false"]).optional(),
   OTP_DUMMY_CODE: z.string().default("123456"),
   /** When unset: required only if `NODE_ENV` is `production`. Set `false` to skip KYC in local/dev. */
   REQUIRE_SELLER_KYC: z.enum(["true", "false"]).optional(),
@@ -57,6 +59,8 @@ export const env = {
         : parsed.NODE_ENV === "production",
   /** Use Cashfree Payment Gateway sandbox host. */
   cashfreeSandbox: parsed.CASHFREE_SANDBOX === "true",
+  /** Fastify `trustProxy` — set `TRUST_PROXY=true` in production behind a reverse proxy. */
+  trustProxy: parsed.TRUST_PROXY === "true",
 };
 
 export type Env = typeof env;

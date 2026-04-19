@@ -1,5 +1,7 @@
 "use client";
 
+import { CircleNotch } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -31,9 +33,21 @@ export function ConfirmSheet({
   onConfirm: () => void | Promise<void>;
   onDecline?: () => void;
 }) {
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (!open) setPending(false);
+  }, [open]);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="gap-0 rounded-t-xl sm:mx-auto sm:max-w-lg">
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && pending) return;
+        onOpenChange(next);
+      }}
+    >
+      <SheetContent side="bottom" className="gap-0 rounded-t-xl sm:mx-auto sm:max-w-lg" aria-busy={pending}>
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription className="text-base">{description}</SheetDescription>
@@ -42,6 +56,7 @@ export function ConfirmSheet({
           <Button
             type="button"
             variant="outline"
+            disabled={pending}
             onClick={() => {
               onDecline?.();
               onOpenChange(false);
@@ -52,16 +67,28 @@ export function ConfirmSheet({
           <Button
             type="button"
             variant={variant === "destructive" ? "destructive" : "default"}
+            disabled={pending}
+            aria-busy={pending}
             onClick={async () => {
+              setPending(true);
               try {
                 await Promise.resolve(onConfirm());
                 onOpenChange(false);
               } catch {
                 /* keep sheet open; caller shows error */
+              } finally {
+                setPending(false);
               }
             }}
           >
-            {confirmLabel}
+            {pending ? (
+              <span className="inline-flex items-center gap-2">
+                <CircleNotch className="size-4 shrink-0 animate-spin" aria-hidden />
+                {confirmLabel}
+              </span>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </SheetFooter>
       </SheetContent>

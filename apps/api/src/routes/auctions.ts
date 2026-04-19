@@ -100,6 +100,69 @@ export async function registerAuctionRoutes(app: FastifyInstance) {
     });
   });
 
+  app.get("/v1/auctions/recently-ended", async (req, reply) => {
+    const q = z
+      .object({
+        cityIds: z.string().optional(),
+        categoryId: z.string().optional(),
+        search: z.string().optional(),
+      })
+      .parse(req.query);
+    const cityIds = q.cityIds?.split(",").filter(Boolean) ?? [];
+    const now = new Date();
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const where: Prisma.AuctionWhereInput = {
+      status: { not: "cancelled" },
+      endAt: { lte: now, gte: twoDaysAgo },
+      listing: {
+        ...(q.categoryId ? { categoryId: q.categoryId } : {}),
+        ...(q.search
+          ? {
+              OR: [
+                { title: { contains: q.search, mode: "insensitive" } },
+                { description: { contains: q.search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+        ...(cityIds.length
+          ? {
+              cities: { some: { cityId: { in: cityIds } } },
+            }
+          : {}),
+      },
+    };
+    const auctions = await prisma.auction.findMany({
+      where,
+      include: {
+        listing: {
+          include: {
+            category: true,
+            cities: { include: { city: true } },
+            seller: { select: { id: true, name: true } },
+            images: { orderBy: { sortOrder: "asc" }, take: 1 },
+          },
+        },
+        bids: { where: { status: "accepted" }, orderBy: { amount: "desc" }, take: 1 },
+      },
+      orderBy: { endAt: "desc" },
+      take: 48,
+    });
+    return reply.send({
+      auctions: auctions.map((a) => {
+        const { images, ...listingRest } = a.listing;
+        return {
+          ...a,
+          currentBid: a.bids[0]?.amount?.toString() ?? null,
+          listing: {
+            ...listingRest,
+            basePrice: a.listing.basePrice.toString(),
+            coverImageUrl: images[0]?.url ?? null,
+          },
+        };
+      }),
+    });
+  });
+
   app.get("/v1/auctions/:id", async (req, reply) => {
     const params = z.object({ id: z.string() }).parse(req.params);
     await resolveAuctionIfEnded(params.id);

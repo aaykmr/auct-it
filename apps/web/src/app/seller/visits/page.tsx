@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/toast-provider";
 import { api, dispatchNotificationsRefresh, getStoredToken } from "@/lib/api";
+import { pickDefaultCityWithList } from "@/lib/geo-default-city";
 import { cn } from "@/lib/utils";
 
 type City = { id: string; name: string };
@@ -112,8 +113,9 @@ export default function SellerVisitsPage() {
         "/v1/me/seller/visit-reminder",
         { token },
       ).catch(() => null);
-      setCities(c.cities);
-      setCityId((prev) => prev || c.cities[0]?.id || "");
+      const { defaultId, cities: cityList } = await pickDefaultCityWithList(c.cities);
+      setCities(cityList);
+      setCityId((prev) => (prev.trim() ? prev : defaultId));
       setSlots(s.slots);
       setReminder(r);
       setMsg(null);

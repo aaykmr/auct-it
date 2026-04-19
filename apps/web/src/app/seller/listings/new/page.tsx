@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, apiUrl, getStoredToken } from "@/lib/api";
+import { pickDefaultCityWithList } from "@/lib/geo-default-city";
 
 type City = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -43,10 +44,11 @@ export default function NewListingPage() {
           api<{ cities: City[] }>("/v1/cities"),
           api<{ categories: Category[] }>("/v1/categories"),
         ]);
-        setCities(c.cities);
+        const { defaultId, cities: cityList } = await pickDefaultCityWithList(c.cities);
+        setCities(cityList);
         setCategories(cat.categories);
         if (cat.categories[0]) setCategoryId(cat.categories[0].id);
-        if (c.cities[0]) setCityId(c.cities[0].id);
+        setCityId(defaultId || cityList[0]?.id || "");
         if (!cat.categories.length || !c.cities.length) {
           setMsg(
             "No categories or cities in the database. From the repo root run: pnpm --filter api exec prisma db seed",

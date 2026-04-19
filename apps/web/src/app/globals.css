@@ -87,3 +87,26 @@
     background-color: var(--background);
   }
 }
+
+/* Sonner: keep toasts fully opaque (library can dim stacked toasts). */
+@layer components {
+  .auct-toaster [data-sonner-toast] {
+    opacity: 1;
+  }
+
+  @media (max-width: 767px) {
+    /* Center on visual viewport: avoid 100vw (scrollbar skew); reset offsets Sonner applies on mobile. */
+    .auct-toaster[data-sonner-toaster] {
+      top: auto !important;
+      right: auto !important;
+      left: 50% !important;
+      bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px) + 12px) !important;
+      transform: translate3d(-50%, 0, 0) !important;
+      width: min(356px, calc(100% - 2rem)) !important;
+      max-width: calc(100% - 2rem) !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      box-sizing: border-box !important;
+    }
+  }
+}

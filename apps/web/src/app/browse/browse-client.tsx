@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AuctionGrid } from "@/components/auction-grid";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { GEO_STORAGE_KEY } from "@/lib/geo-default-city";
 
 type City = { id: string; name: string };
 type Category = { id: string; name: string; slug: string };
+
+type AuctionRow = {
+  id: string;
+  endAt: string;
+  currentBid: string | null;
+  listing: {
+    title: string;
+    basePrice: string;
+    coverImageUrl?: string | null;
+    category: { name: string };
+    cities: { city: { name: string } }[];
+  };
+};
 
 export function BrowseClient() {
   const sp = useSearchParams();
@@ -23,23 +37,12 @@ export function BrowseClient() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cityIds, setCityIds] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
-  const [auctions, setAuctions] = useState<
-    {
-      id: string;
-      endAt: string;
-      currentBid: string | null;
-      listing: {
-        title: string;
-        basePrice: string;
-        coverImageUrl?: string | null;
-        category: { name: string };
-        cities: { city: { name: string } }[];
-      };
-    }[]
-  >([]);
+  const [auctions, setAuctions] = useState<AuctionRow[]>([]);
+  const [recentAuctions, setRecentAuctions] = useState<AuctionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [metaReady, setMetaReady] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
+  const geoAppliedRef = useRef(false);
 
   useEffect(() => {
     void (async () => {
@@ -66,12 +69,48 @@ export function BrowseClient() {
   useEffect(() => {
     if (!metaReady) return;
     const initialCat = sp.get("categoryId");
-    const initialCities = sp.get("cityIds")?.split(",").filter(Boolean) ?? [];
     if (initialCat && categories.some((x) => x.id === initialCat)) setCategoryId(initialCat);
     else setCategoryId(undefined);
-    const validCityIds = initialCities.filter((id) => cities.some((x) => x.id === id));
-    setCityIds(validCityIds);
-  }, [sp, metaReady, categories, cities]);
+  }, [sp, metaReady, categories]);
+
+  useEffect(() => {
+    if (!metaReady) return;
+    const urlCityIds = sp.get("cityIds")?.split(",").filter(Boolean) ?? [];
+    if (urlCityIds.length > 0) {
+      const valid = urlCityIds.filter((id) => cities.some((x) => x.id === id));
+      setCityIds(valid);
+      geoAppliedRef.current = true;
+    }
+  }, [sp, metaReady, cities]);
+
+  useEffect(() => {
+    if (!metaReady || cities.length === 0 || geoAppliedRef.current) return;
+    const urlCityIds = sp.get("cityIds")?.split(",").filter(Boolean) ?? [];
+    if (urlCityIds.length > 0) return;
+
+    const stored = typeof window !== "undefined" ? localStorage.getItem(GEO_STORAGE_KEY) : null;
+    if (stored && cities.some((c) => c.id === stored)) {
+      setCityIds([stored]);
+      geoAppliedRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    void api<{ cityId: string | null }>("/v1/geo/city-hint")
+      .then((r) => {
+        if (cancelled || !r.cityId || !cities.some((c) => c.id === r.cityId)) {
+          geoAppliedRef.current = true;
+          return;
+        }
+        localStorage.setItem(GEO_STORAGE_KEY, r.cityId);
+        setCityIds([r.cityId]);
+        geoAppliedRef.current = true;
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [metaReady, cities, sp]);
 
   const query = useMemo(() => {
     const p = new URLSearchParams();
@@ -101,18 +140,23 @@ export function BrowseClient() {
       setLoading(true);
       try {
         const q = query ? `?${query}` : "";
-        const data = await api<{ auctions: typeof auctions }>(`/v1/auctions${q}`);
-        setAuctions(
-          data.auctions.map((a) => ({
+        const [live, recent] = await Promise.all([
+          api<{ auctions: AuctionRow[] }>(`/v1/auctions${q}`),
+          api<{ auctions: AuctionRow[] }>(`/v1/auctions/recently-ended${q}`),
+        ]);
+        const norm = (rows: AuctionRow[]) =>
+          rows.map((a) => ({
             ...a,
             listing: {
               ...a.listing,
               basePrice: String(a.listing.basePrice),
             },
-          })),
-        );
+          }));
+        setAuctions(norm(live.auctions));
+        setRecentAuctions(norm(recent.auctions));
       } catch {
         setAuctions([]);
+        setRecentAuctions([]);
       } finally {
         setLoading(false);
       }
@@ -120,7 +164,7 @@ export function BrowseClient() {
   }, [query]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {metaError ? (
         <p className="text-destructive text-sm" role="alert">
           {metaError}
@@ -135,7 +179,10 @@ export function BrowseClient() {
               value={safeCityValue}
               onValueChange={(v) => {
                 if (v === ALL || v == null) setCityIds([]);
-                else setCityIds([v]);
+                else {
+                  setCityIds([v]);
+                  if (typeof window !== "undefined") localStorage.setItem(GEO_STORAGE_KEY, v);
+                }
               }}
             >
               <SelectTrigger className="w-full min-w-0">
@@ -183,11 +230,27 @@ export function BrowseClient() {
           Clear
         </Button>
       </div>
-      {loading ? (
-        <p className="text-muted-foreground text-sm">Loading auctions…</p>
-      ) : (
-        <AuctionGrid auctions={auctions} />
-      )}
+
+      <section>
+        <h2 className="mb-4 text-xl font-semibold tracking-tight md:text-2xl">Live auctions</h2>
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Loading auctions…</p>
+        ) : (
+          <AuctionGrid auctions={auctions} variant="live" />
+        )}
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">Recently ended</h2>
+          <p className="text-muted-foreground mt-1 text-sm">Last 2 days, with the same filters.</p>
+        </div>
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : (
+          <AuctionGrid auctions={recentAuctions} variant="recent" />
+        )}
+      </section>
     </div>
   );
 }

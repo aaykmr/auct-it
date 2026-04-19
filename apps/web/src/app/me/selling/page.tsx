@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,6 +15,7 @@ type ListingRow = {
   title: string;
   status: string;
   basePrice: unknown;
+  coverImageUrl?: string | null;
   category: { name: string };
   auctions: { id: string; status: string; endAt: string }[];
 };
@@ -96,10 +98,23 @@ export default function SellingPage() {
               <li key={l.id}>
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg md:text-xl">{l.title}</CardTitle>
-                    <CardDescription className="text-base">
-                      {l.category.name} · Base ₹{base} · {l.status}
-                    </CardDescription>
+                    <div className="flex gap-4">
+                      <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-md bg-muted sm:h-28 sm:w-36">
+                        <Image
+                          src={l.coverImageUrl ?? `https://picsum.photos/seed/${l.id}/200/160`}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="144px"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <CardTitle className="text-lg md:text-xl">{l.title}</CardTitle>
+                        <CardDescription className="text-base">
+                          {l.category.name} · Base ₹{base} · {l.status}
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-3">
                     {auction && (
